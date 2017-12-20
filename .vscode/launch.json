@@ -1,0 +1,19 @@
+{
+    // 使用 IntelliSense 以得知可用的屬性。
+    // 暫留以檢視現有屬性的描述。
+    // 如需詳細資訊，請瀏覽: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Launch Program",
+            "program": "${workspaceFolder}\\line.js",
+            "env": {
+                "CHANNEL_ACCESS_TOKEN": "CsR1tRMsaaMgQYEoi1J50Wi7W/EQyNUF8pZpdBlaIJu3PMEGCoiP62NAFcb4++fimhkXfWqAN2EV9mYy77No0JTSvTjS3Umyw8Z+4Bun85HWW8zfQ25YI93LKSHfWee0CE13U0nBh0Vv2sBNVKboDgdB04t89/1O/w1cDnyilFU=",
+                "CHANNEL_SECRET": "58a42475f74073df54edda24cde00f50",
+                "PORT": 8089,
+            },
+        }
+    ]
+}

@@ -6,6 +6,8 @@ const connection = new autobahn.Connection({
   realm: "realm1"
 });
 
+const tickers = {};
+
 module.exports = {
   open: function() {
     console.log('Open poloniex connection');
@@ -16,24 +18,27 @@ module.exports = {
   },
   getTicker: function(pair) {
     pair = pair.toUpperCase();
-    var ticker = tickersData[pair];
+    var ticker = tickers[pair];
     return ticker;
   },
   getCurrencyInfo: function(currency) {
     currency = currency.toUpperCase();
     var response;
     // for-in loop will looping within key(in this case, key is pair)
-    for (pair in tickersData) {
-      if (tickersData.hasOwnProperty(pair) === false || pair.indexOf('_' + currency) === -1) {
+    for (pair in tickers) {
+      if (pair.indexOf('_' + currency) === -1) {
         continue;
       }
       var last = currency + '->' + pair.replace('_' + currency, '') + ': ' + (Math.round(tickersData[pair].last * 10000) / 10000);
       if (response == undefined) {
-        response = tickersData[pair].updatetime.toISOString() + '\n' + last;
+        response = tickers[pair].updatetime.toISOString() + '\n' + last;
       } else {
         response += '\n' + last;
       }
     }
+    // if tickers does not have given currency, return empty
+    if (response == undefined)
+      response = '';
     return response;
   }
 };
@@ -65,25 +70,26 @@ function httpsGetTickers() {
           //console.log(parsedData);
           for (var pair in parsedData) {                                          
             //console.log(pair);
-            if (pair === 'USDT_BTC' || pair === 'USDT_ETH' || pair === 'USDT_ZEC' || 
+            if (pair === 'USDT_BTC' || pair === 'USDT_ETH' ||
+                pair === 'USDT_ZEC' || pair === 'USDT_BCH' || 
                 pair === 'BTC_ETH' || pair === 'BTC_ZEC' ||                          
                 pair === 'ETH_ZEC') {                                                
-              if (tickersData[pair] == undefined) {                                  
-                tickersData[pair] = {};                                              
-                console.log('Received ticker data:' + pair);                         
+              if (tickers[pair] == undefined) {                                  
+                tickers[pair] = {};                                              
+                console.log('Ticker initialized:' + pair);                         
               }                                                                      
-              tickersData[pair].pair = pair;                                         
-              tickersData[pair].last = parsedData[pair]['last'];                     
-              tickersData[pair].ask = parsedData[pair]['lowestAsk'];                 
-              tickersData[pair].bid = parsedData[pair]['highestBid'];                
-              tickersData[pair].change = parsedData[pair]['percentChange'];          
-              tickersData[pair].volume = parsedData[pair]['quoteVolume'];            
-              tickersData[pair].forzen = parsedData[pair]['isForzen'];               
-              tickersData[pair].highest = parsedData[pair]['high24hr'];              
-              tickersData[pair].lowest = parsedData[pair]['low24hr'];                
-              tickersData[pair].updatetime = new Date();                             
+              tickers[pair].pair = pair;                                         
+              tickers[pair].last = parsedData[pair]['last'];                     
+              tickers[pair].ask = parsedData[pair]['lowestAsk'];                 
+              tickers[pair].bid = parsedData[pair]['highestBid'];                
+              tickers[pair].change = parsedData[pair]['percentChange'];          
+              tickers[pair].volume = parsedData[pair]['quoteVolume'];            
+              tickers[pair].forzen = parsedData[pair]['isForzen'];               
+              tickers[pair].highest = parsedData[pair]['high24hr'];              
+              tickers[pair].lowest = parsedData[pair]['low24hr'];                
+              tickers[pair].updatetime = new Date();                             
               console.log('Ticker updated:' + pair);
-              routineUpdatetime = tickersData[pair].updatetime;                      
+              routineUpdatetime = tickers[pair].updatetime;                      
             }                                                                        
           }                                                                         
         } catch (e) {                                    
@@ -96,7 +102,7 @@ function httpsGetTickers() {
   });
 }
 
-// Poloniex will not fire ticker event in a period of time
+// Poloniex has not available for subscribe ticker event in a period of time
 var routineUpdatetime;
 var routineInterval;
 function routineCheckUpdate() {
@@ -115,7 +121,6 @@ function routineCheckUpdate() {
   //}
 }
 
-var tickersData = {};
 connection.onopen = function(session) {
   console.log('Poloniex websocket connection opened');
   function tickerEvent(args, kwargs) {
@@ -124,22 +129,22 @@ connection.onopen = function(session) {
         args[0] === 'BTC_ETH' || args[0] === 'BTC_ZEC' || args[0] === 'BTC_BCH' ||
         args[0] === 'ETH_BCH' || args[0] === 'ETH_ZEC') {
       var pair = args[0];
-      if (tickersData[pair] == undefined) {
-        tickersData[pair] = {};
+      if (tickers[pair] == undefined) {
+        tickers[pair] = {};
         console.log('Received ticker data:' + pair);
       }
-      tickersData[pair].pair = pair;
-      tickersData[pair].last = args[1];
-      tickersData[pair].ask = args[2];
-      tickersData[pair].bid = args[3];
-      tickersData[pair].change = args[4];
-      tickersData[pair].volume = args[5];
-      tickersData[pair].frozen = args[7];
-      tickersData[pair].highest = args[8];
-      tickersData[pair].lowest = args[9];
-      tickersData[pair].updatetime = new Date();
+      tickers[pair].pair = pair;
+      tickers[pair].last = args[1];
+      tickers[pair].ask = args[2];
+      tickers[pair].bid = args[3];
+      tickers[pair].change = args[4];
+      tickers[pair].volume = args[5];
+      tickers[pair].frozen = args[7];
+      tickers[pair].highest = args[8];
+      tickers[pair].lowest = args[9];
+      tickers[pair].updatetime = new Date();
 
-      routineUpdatetime = tickersData[pair].updatetime;
+      routineUpdatetime = tickers[pair].updatetime;
       //console.log(args);
     }
   }
@@ -150,7 +155,8 @@ connection.onopen = function(session) {
     //console.log('trollbox:' + args);
   }
   
-  session.subscribe('ticker', tickerEvent);
+  // Subscribe seems not working, use public API instead
+  //session.subscribe('ticker', tickerEvent);
   //session.subscribe('USDT_BTC', marketEvent);
   //session.subscribe('trollbox', trollboxEvent);
   // Subscribe currently seems not work fine, use public API instead

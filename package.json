@@ -1,8 +1,9 @@
 {
-	"main": "helloworld.js",
+	"main": "line.js",
 	"dependencies": {
 		"pg": "~7.3.0",
 		"pg-promise": "~6.5.1",
+		"bluebird": "~3.5.1",
 		"@line/bot-sdk": "^2.0.0",
 		"express": "^4.15.2",
 		"autobahn": "^17.5.2"
