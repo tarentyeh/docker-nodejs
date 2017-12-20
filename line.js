@@ -7,7 +7,9 @@ const events = require('events');
 const eventHandler = new events();
 
 const poloniex = require('./poloniex');
+const bitfinex = require('./bitfinex.js');
 const helper = require('./helper');
+const postgres = require('./postgres.js');
 
 module.exports = {
   handler: eventHandler
@@ -138,6 +140,12 @@ function resolveMessageText(sourceId, messageText) {
   // initialize users for each source id
   if (users[sourceId] == undefined) {
     users[sourceId] = {};
+    // access to postgres database
+    postgres.getUser(sourceId, (error, data) => {
+      if (error != null) {
+        postgres.setUser(sourceId, false, '');
+      }
+    });
   }
 
   var replyText;
@@ -150,10 +158,18 @@ function resolveMessageText(sourceId, messageText) {
       replyText = poloniex.getCurrencyInfo(messageText);
       console.log(`get currency info:${replyText}`);
       break;
+    case 'iot':
+    case 'iota':
+      replyText = bitfinex.getCurrencyInfo('iot');
+      console.log(`get currency info:${replyText}`);
+      break;
     case 'notify':
       if (users[sourceId].notification == undefined) {
         users[sourceId].notification = setInterval(pushNotification, 30 * 60 * 1000, sourceId);
         replyText = 'start receiving notification';
+        replyText += '\n';
+        replyText += getAllCurrencyInfo();
+        users[sourceId].notificationTime = new Date();
       } else {
         clearInterval(users[sourceId].notification);
         replyText = 'stop receiving notification';
@@ -166,16 +182,24 @@ function resolveMessageText(sourceId, messageText) {
   return replyText;
 }
 
+function getAllCurrencyInfo() {
+  var text;
+  text = poloniex.getCurrencyInfo('btc') + '\n';
+  text += poloniex.getCurrencyInfo('zec') + '\n';
+  text += poloniex.getCurrencyInfo('eth') + '\n';
+  text += poloniex.getCurrencyInfo('bch') + '\n';
+  text += bitfinex.getCurrencyInfo('iota');
+  return text;
+}
+
 function pushNotification(sourceId) {
   var notify = {
     type: 'text',
     text: ''
   }
-  notify.text = poloniex.getCurrencyInfo('btc') + '\n';
-  notify.text += poloniex.getCurrencyInfo('zec') + '\n';
-  notify.text += poloniex.getCurrencyInfo('eth') + '\n';
-  notify.text += poloniex.getCurrencyInfo('bch');
+  notify.text = getAllCurrencyInfo();
   client.pushMessage(sourceId, notify);
+  users[sourceId].notificationTime = new Date();
 }
 
 // listen on port
@@ -183,4 +207,6 @@ const port = process.env.PORT || 8088;
 app.listen(port, () => {
   console.log(`listening on ${port}`);
   poloniex.open();
+  bitfinex.init();
+  bitfinex.start();
 });

@@ -17,6 +17,7 @@ module.exports = {
     connection.close();
   },
   getTicker: function(pair) {
+    // poloniex pair format: USDT_BTC
     pair = pair.toUpperCase();
     var ticker = tickers[pair];
     return ticker;
@@ -29,7 +30,7 @@ module.exports = {
       if (pair.indexOf('_' + currency) === -1) {
         continue;
       }
-      var last = currency + '->' + pair.replace('_' + currency, '') + ': ' + (Math.round(tickersData[pair].last * 10000) / 10000);
+      var last = currency + '->' + pair.replace('_' + currency, '') + ': ' + (Math.round(tickers[pair].last * 10000) / 10000);
       if (response == undefined) {
         response = tickers[pair].updatetime.toISOString() + '\n' + last;
       } else {
@@ -62,13 +63,13 @@ function httpsGetTickers() {
       res.resume();
     } else {                                                                      
       res.setEncoding('utf8');                                                    
-      let rawData = '';                                                           
-      res.on('data', function(chunk) { rawData += chunk; });                      
+      let rawText = '';                                                           
+      res.on('data', function(chunk) { rawText += chunk; });                      
       res.on('end', function() {                                                  
         try {                                                                     
-          const parsedData = JSON.parse(rawData);                                 
-          //console.log(parsedData);
-          for (var pair in parsedData) {                                          
+          const data = JSON.parse(rawText);                                 
+          //console.log(data);
+          for (var pair in data) {                                          
             //console.log(pair);
             if (pair === 'USDT_BTC' || pair === 'USDT_ETH' ||
                 pair === 'USDT_ZEC' || pair === 'USDT_BCH' || 
@@ -79,14 +80,14 @@ function httpsGetTickers() {
                 console.log('Ticker initialized:' + pair);                         
               }                                                                      
               tickers[pair].pair = pair;                                         
-              tickers[pair].last = parsedData[pair]['last'];                     
-              tickers[pair].ask = parsedData[pair]['lowestAsk'];                 
-              tickers[pair].bid = parsedData[pair]['highestBid'];                
-              tickers[pair].change = parsedData[pair]['percentChange'];          
-              tickers[pair].volume = parsedData[pair]['quoteVolume'];            
-              tickers[pair].forzen = parsedData[pair]['isForzen'];               
-              tickers[pair].highest = parsedData[pair]['high24hr'];              
-              tickers[pair].lowest = parsedData[pair]['low24hr'];                
+              tickers[pair].last = data[pair].last;
+              tickers[pair].ask = data[pair].lowestAsk;                 
+              tickers[pair].bid = data[pair].highestBid;                
+              tickers[pair].change = data[pair].percentChange;          
+              tickers[pair].volume = data[pair].quoteVolume;            
+              tickers[pair].forzen = data[pair].isForzen;               
+              tickers[pair].highest = data[pair].high24hr;              
+              tickers[pair].lowest = data[pair].low24hr;                
               tickers[pair].updatetime = new Date();                             
               console.log('Ticker updated:' + pair);
               routineUpdatetime = tickers[pair].updatetime;                      
