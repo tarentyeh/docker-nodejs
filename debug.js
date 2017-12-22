@@ -1,40 +1,27 @@
-const poloniex = require('./poloniex');
-//const Promise = require('promise');
+'use strict';
 
 var date = new Date();
-//console.log(date);
-//console.log(date.getTime());
-//console.log(date.toString());
-//console.log(date.toUTCString());
-//console.log(date.toISOString());
+console.log(date);
+console.log(date.getTime());
+console.log(date.toString());
+console.log(date.toUTCString());
+console.log(date.toISOString());
+console.log(Date.now());
 
+var bitfinex;
 
-var ps = new Promise((resolve, reject) => {
-  setTimeout(() => {
-    throw new Error('error in resolve');
-    resolve(123);
-  }, 1000)
-  //throw new Error('error in resolve');
-})
-.then(val => {
-  console.log(val);
-  //throw new Error('error from resolve=' + val);
-})
-.catch(err => {
-  console.error('reject because error:', err);
-  return Promise.reject(err);
-})
-.catch(err => {
-  console.error('uncatch or returned reject:', err);
-});
+var interval = setInterval(() => {
+  if (bitfinex == undefined) {
+    return;
+  }
+  var result = bitfinex.getCurrencyInfo('iot');
+  console.log('from debug:' + result);
+}, 20 * 1000);
 
-//poloniex.open();
+function setBitfinexObject(obj) {
+  bitfinex = obj;
+}
 
-setTimeout(function() {
-  var output;
-  output = poloniex.getCurrencyInfo('btc');
-  console.log(output);
-  output = poloniex.getCurrencyInfo('zec');
-  console.log(output);
-
-}, 40000);
+module.exports = {
+  bitfinex: setBitfinexObject,
+}

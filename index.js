@@ -1,46 +1,23 @@
 'use strict';
 
+const poloniex = require('./poloniex.js');
+const bitfinex = require('./bitfinex.js');
 const postgres = require('./postgres.js');
+poloniex.init();
+poloniex.start();
+bitfinex.init();
+bitfinex.start();
 
-postgres.getUser('test', function(error, data) {
-  if (error != null) {
-    console.log(error);
-    return;
-  }
-  console.log(data);
-  data.hasNotification = false;
-  data.notificationTime = '';
-  console.log(data);
-  postgres.updateUser(data.sourceId, data.hasNotification, data.notificationTime);
-});
+const line = require('./line.js');
+line.init(poloniex, bitfinex, postgres);
+line.start();
 
-postgres.getUser('aabb', function(error, data) {
-  if (error != null) {
-    console.log(error);
-    postgres.setUser('aabb', true, new Date().toISOString());
-    return;
-  }
-  console.log(data);
-});
+const debug = require('./debug.js');
 
-//const bitfinex = require('./bitfinex');
-//bitfinex.init();
-//bitfinex.start();
+console.log('set object to debug');
+debug.bitfinex(bitfinex);
 
-//const pubRest = new bitfinex('','');
-
-//function HttpsGetTickers() {
-//  pubRest.ticker('iotusd', function(error, data) {
-//    console.log(data);
-//  });
-//  pubRest.ticker('iotbtc', function(error, data) {
-//    console.log(data);
-//  });
-//}
-
-//function routineCheckUpdate() {
-//  console.log('routine check update', new Date().toISOString());
-//  HttpsGetTickers();
-//}
-
-//setInterval(routineCheckUpdate, 10 * 1000);
+var interval = setInterval(() => {
+  var result = bitfinex.getCurrencyInfo('iot');
+  console.log('from index:' + result);
+}, 25 * 1000);

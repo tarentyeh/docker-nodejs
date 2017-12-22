@@ -139,60 +139,70 @@ function tickerCallback(pair, data) {
 }
 
 function httpsGetTickers() {
-  publicApi.ticker('iotusd', function(error, data) {
-    if (error != null) {
+  publicApi.ticker('iotusd', (error, data) => {
+    if (error == null) {
+      tickerCallback('iotusd', data);
+    } else {
       console.log(error);
-      return;
     }
-    tickerCallback('iotusd', data);
   });
-  publicApi.ticker('iotbtc', function(error, data) {
-    if (error != null) {
+  publicApi.ticker('iotbtc', (error, data) => {
+    if (error == null) {
+      tickerCallback('iotbtc', data);
+    } else {
       console.log(error);
-      return;
     }
-    tickerCallback('iotbtc', data);
   });
 }
 
-function routineCheckUpdate() {
+function routineUpdateFunction() {
   httpsGetTickers();
+  routineUpdatetime = new Date();
 }
 
-function init() {
+function initModule() {
+  // Public API does not needs key and secret
   publicApi = new rest('','');
 }
 
-var routineUpdatetime;
-var routineInterval;
-function start() {
+var routineUpdatetime = null;
+var routineInterval = null;
+
+function startRoutineInterval() {
   console.log('Start trace bitfinex price');
-  // do the same with poloniex
+  // Update current tickers data
   httpsGetTickers();
-  
-  // Reset routineUpdatetime and set interval check update
-  routineUpdatetime = undefined;
-  // Change to use public API get tickers data for each 5 minutes
-  routineInterval = setInterval(routineCheckUpdate, 5 * 60 * 1000);
+  routineUpdatetime = new Date();
+
+  if (routineInterval == undefined || routineInterval == null) {
+    // Use public API get tickers data for each 5 minutes
+    routineInterval = setInterval(routineUpdateFunction, 5 * 60 * 1000);
+  } else {
+    console.log('Routine interval has been exist, should be stopped before start again');
+  }
 }
 
-function stop() {
-  if (routineInterval != undefined) {
+function stopRoutineInterval() {
+  if (routineInterval == undefined || routineInterval == null) {
+    console.log('Routine interval is not exists, should be started to stop');
+  } else {
+    // Clear interval timer
     clearInterval(routineInterval);
+    routineInterval = null;
   }
 }
 
 module.exports = {
-  init,
-  start,
-  stop,
-  getTicker: function(pair) {
+  init: initModule,
+  start: startRoutineInterval,
+  stop: stopRoutineInterval,
+  getTicker: (pair) => {
     // bitfinex pair format: btcusd
     pair = pair.toLowerCase();
     var ticker = tickers[pair];
     return ticker;
   },
-  getCurrencyInfo: function(currency) {
+  getCurrencyInfo: (currency, withTimestamp = true) => {
     currency = currency.toLowerCase();
     var response;
     // for-in loop will looping within key(in this case, key is pair)
@@ -200,11 +210,15 @@ module.exports = {
       if (pair.indexOf(currency) !== 0) {
         continue;
       }
-      var last = currency.toUpperCase() + '->' + pair.replace(currency, '').toUpperCase() + ': ' + tickers[pair].last;
+      var price = currency.toUpperCase() + '->' + pair.replace(currency, '').toUpperCase() + ': ' + tickers[pair].last;
       if (response == undefined) {
-        response = tickers[pair].updatetime.toISOString() + '\n' + last;
+        if (withTimestamp == true) {
+          response = tickers[pair].updatetime.toISOString() + '\n' + price;
+        } else {
+          response = price;
+        }
       } else {
-        response += '\n' + last;
+        response += '\n' + price;
       }
     }
     // if tickers does not have given currency, return empty

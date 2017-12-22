@@ -27,7 +27,7 @@ console.log('connect to pgp');
 //  //.finally(db.$pool.end);
 
 function getAllUsers(cb) {
-  db.any('SELECT * FROM "users" LIMIT 500', ['%'])
+  db.any('SELECT * FROM "users" LIMIT 500', [])
     .then((data) => {
       cb(null, data);
     })
@@ -38,7 +38,7 @@ function getAllUsers(cb) {
 }
 
 function getUser(sourceId, cb) {
-  db.one('SELECT * FROM "users" WHERE "sourceId" LIKE $1', [sourceId])
+  db.one('SELECT * FROM "users" WHERE "sourceId" = $1', [sourceId])
     .then((data) => {
       cb(null, data);
     })
@@ -49,21 +49,35 @@ function getUser(sourceId, cb) {
 }
 
 function setUser(sourceId, hasNotification, notificationTime) {
-  db.query('INSERT INTO "users" ("sourceId", "hasNotification", "notificationTime") VALUES ($1, $2, $3)', [sourceId, hasNotification, notificationTime])
-    .then((result) => { console.log(result) })
-    .catch((error) => { console.log(error) })
-    //.finally(db.$pool.end);
-}
-
-function updateUser(sourceId, hasNotification, notificationTime) {
-  db.query('UPDATE "users" SET "hasNotification" = $2, "notificationTime" = $3 WHERE "sourceId" LIKE $1', [sourceId, hasNotification, notificationTime])
-    .then((result) => { console.log(result) })  
-    .catch((error) => { console.log(error) })
-    //.finally(db.$pool.end);
+  getUser(sourceId, (error, data) => {
+    let queryString;
+    if (error != null) {
+      if (error.code === pgp.errors.queryResultErrorCode.noData) {
+        console.log('user not exists, use insert query');
+        queryString = 'INSERT INTO "users" ("sourceId", "hasNotification", "notificationTime") VALUES ($1, $2, $3)';
+      } else {
+        console.log(error);
+      }
+    } else {
+      console.log('user exists, use update query');
+      queryString = 'UPDATE "users" SET "hasNotification" = $2, "notificationTime" = $3 WHERE "sourceId" LIKE $1';
+    }
+    db.query(queryString, [sourceId, hasNotification, notificationTime])
+      .catch((error) => {
+        console.log('setUser:', error);
+      })
+  });
 }
 
 module.exports = {
+  getAllUsers,
   getUser,
   setUser,
-  updateUser
+  errorCode: pgp.errors.queryResultErrorCode,
+  poolEnd: () => {
+    db.$pool.end;
+  },
+  end: () => {
+    pgp.end();
+  }
 };

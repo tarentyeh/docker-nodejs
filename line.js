@@ -6,14 +6,9 @@ const lineException = require('@line/bot-sdk/exceptions');
 const events = require('events');
 const eventHandler = new events();
 
-const poloniex = require('./poloniex');
-const bitfinex = require('./bitfinex.js');
-const helper = require('./helper');
-const postgres = require('./postgres.js');
-
-module.exports = {
-  handler: eventHandler
-};
+var poloniex;
+var bitfinex;
+var postgres;
 
 // create LINE SDK config from env variables
 const config = {
@@ -133,6 +128,28 @@ function resolveSourceId(event) {
 }
 
 const users = {};
+function loadLineUsers() {
+  // Preload registed users from postgres database
+  postgres.getAllUsers((error, data) => {
+    if (error == null) {
+      for(let key in data) {
+        let sourceId = data[key].sourceId;
+        let hasNotification = data[key].hasNotification;
+        if (users[sourceId] == undefined) {
+          users[sourceId] = {};
+        }
+        if (users[sourceId].notification == undefined && hasNotification == true) {
+          users[sourceId].notification = setInterval(pushNotification, 30 * 60 * 1000, sourceId);
+          users[sourceId].notificationTime = new Date();
+        }
+        console.log('Load user:' + sourceId + " has notification:" + hasNotification);
+      }
+    } else {
+      console.log(error);
+    }
+  });
+}
+
 function resolveMessageText(sourceId, messageText) {
   if (sourceId == undefined) {
     return undefined;
@@ -142,14 +159,14 @@ function resolveMessageText(sourceId, messageText) {
     users[sourceId] = {};
     // access to postgres database
     postgres.getUser(sourceId, (error, data) => {
-      if (error != null) {
+      if (error != null && error.code === postgres.errorCode.noData) {
         postgres.setUser(sourceId, false, '');
       }
     });
   }
 
   var replyText;
-  switch (messageText)
+  switch (messageText.toLowerCase())
   {
     case 'zec':
     case 'btc':
@@ -170,9 +187,12 @@ function resolveMessageText(sourceId, messageText) {
         replyText += '\n';
         replyText += getAllCurrencyInfo();
         users[sourceId].notificationTime = new Date();
+        // Update user setting to database, carefull about writing delay in callback
+        postgres.setUser(sourceId, true, users[sourceId].notificationTime);
       } else {
         clearInterval(users[sourceId].notification);
         replyText = 'stop receiving notification';
+        postgres.setUser(sourceId, false, '');
       }
       console.log(`notification changed:${sourceId}`);
       break;
@@ -184,11 +204,13 @@ function resolveMessageText(sourceId, messageText) {
 
 function getAllCurrencyInfo() {
   var text;
+  // Currently poloniex uses public API get all currency info at one time,
+  // just makes first currency has timestamp.
   text = poloniex.getCurrencyInfo('btc') + '\n';
-  text += poloniex.getCurrencyInfo('zec') + '\n';
-  text += poloniex.getCurrencyInfo('eth') + '\n';
-  text += poloniex.getCurrencyInfo('bch') + '\n';
-  text += bitfinex.getCurrencyInfo('iota');
+  text += poloniex.getCurrencyInfo('zec', false) + '\n';
+  text += poloniex.getCurrencyInfo('eth', false) + '\n';
+  text += poloniex.getCurrencyInfo('bch', false) + '\n';
+  text += bitfinex.getCurrencyInfo('iot');
   return text;
 }
 
@@ -202,11 +224,34 @@ function pushNotification(sourceId) {
   users[sourceId].notificationTime = new Date();
 }
 
-// listen on port
-const port = process.env.PORT || 8088;
-app.listen(port, () => {
-  console.log(`listening on ${port}`);
-  poloniex.open();
-  bitfinex.init();
-  bitfinex.start();
-});
+module.exports = {
+  handler: eventHandler,
+  init: (poloniexModule, bitfinexModule, postgresModule) => {
+    poloniex = poloniexModule;
+    bitfinex = bitfinexModule;
+    postgres = postgresModule;
+  },
+  start: (port) => {
+    if (poloniex == undefined || bitfinex == undefined || postgres == undefined) {
+      console.log('The line module must be done init with valid modules before start');
+      return;
+    }
+    loadLineUsers();
+    port = port || 8088;
+    app.listen(port, () => {
+      console.log(`listening on ${port}`);
+    });
+  },
+};
+
+// Modify to do as module
+//// listen on port
+//const port = process.env.PORT || 8088;
+//app.listen(port, () => {
+//  console.log(`listening on ${port}`);
+//  loadAllUsers();
+//  poloniex.init();
+//  poloniex.start();
+//  bitfinex.init();
+//  bitfinex.start();
+//});
