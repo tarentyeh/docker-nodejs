@@ -1,7 +1,7 @@
 'use strict';
 
 const lineBot = require('@line/bot-sdk');
-const express = require('express');
+//const express = require('express');
 const lineException = require('@line/bot-sdk/exceptions');
 const events = require('events');
 const eventHandler = new events();
@@ -19,28 +19,28 @@ const config = {
 // create LINE SDK client
 const client = new lineBot.Client(config);
 
-// create Express app
-// about Express itself: https://expressjs.com/
-const app = express();
+//// create Express app
+//// about Express itself: https://expressjs.com/
+//const app = express();
 
-// register a webhook handler with middleware
-// about the middleware, please refer to doc
-app.post('/webhook', lineBot.middleware(config), (req, res) => {
-  Promise
-    .all(req.body.events.map(handleEvent))
-    .then((result) => res.json(result));
-});
+//// register a webhook handler with middleware
+//// about the middleware, please refer to doc
+//app.post('/webhook', lineBot.middleware(config), (req, res) => {
+//  Promise
+//    .all(req.body.events.map(handleEvent))
+//    .then((result) => res.json(result));
+//});
 
-app.use((err, req, res, next) => {
-  if (err instanceof lineException.SignatureValidationFailed) {
-    res.status(401).send(err.signature);
-    return;
-  } else if (err instanceof lineException.JSONParseError) {
-    res.status(400).send(err.raw);
-    return;
-  }
-  next(err);
-});
+//app.use((err, req, res, next) => {
+//  if (err instanceof lineException.SignatureValidationFailed) {
+//    res.status(401).send(err.signature);
+//    return;
+//  } else if (err instanceof lineException.JSONParseError) {
+//    res.status(400).send(err.raw);
+//    return;
+//  }
+//  next(err);
+//});
 
 // event handler
 function handleEvent(event) {
@@ -225,11 +225,28 @@ function pushNotification(sourceId) {
 }
 
 module.exports = {
-  handler: eventHandler,
-  init: (poloniexModule, bitfinexModule, postgresModule) => {
+  eventHandler,
+  init: (poloniexModule, bitfinexModule, postgresModule, expressApp) => {
     poloniex = poloniexModule;
     bitfinex = bitfinexModule;
     postgres = postgresModule;
+    // post webhook request for line bot and handle request error
+    // register a webhook handler with middleware, about the middleware, please refer to doc
+    expressApp.post('/webhook', lineBot.middleware(config), (req, res) => {
+      Promise
+        .all(req.body.events.map(handleEvent))
+        .then((result) => res.json(result));
+    });
+    expressApp.use((err, req, res, next) => {
+      if (err instanceof lineException.SignatureValidationFailed) {
+        res.status(401).send(err.signature);
+        return;
+      } else if (err instanceof lineException.JSONParseError) {
+        res.status(400).send(err.raw);
+        return;
+      }
+      next(err);
+    });
   },
   start: (port) => {
     if (poloniex == undefined || bitfinex == undefined || postgres == undefined) {
@@ -237,10 +254,6 @@ module.exports = {
       return;
     }
     loadLineUsers();
-    port = port || 8088;
-    app.listen(port, () => {
-      console.log(`listening on ${port}`);
-    });
   },
 };
 
