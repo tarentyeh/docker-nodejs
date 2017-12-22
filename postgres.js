@@ -4,13 +4,15 @@ const initOptions = {
 };
 const pgp = require('pg-promise')(initOptions);
 const config = {
-  host: 'postgres-db',
+  // In production environment, host name is postgres container name from docker run or yml file
+  // In developer environment, host name needs to defined in env variables or launch.json
+  host: process.env.POSTGRES_HOST || 'postgres-db',
   port: 5432,
   database: 'example_database',
   user: 'postgres',
   password: 'example'
 };
-const pgUri = 'postgres://postgres:example@postgres-db:5432/example_database';
+//const pgUri = 'postgres://postgres:example@postgres-db:5432/example_database';
 
 const db = pgp(config);
 

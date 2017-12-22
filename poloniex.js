@@ -120,7 +120,7 @@ module.exports = {
       if (pair.indexOf('_' + currency) === -1) {
         continue;
       }
-      var price = currency.toUpperCase() + '->' + pair.replace(currency, '').toUpperCase() + ': ' + (Math.round(tickers[pair].last * 10000) / 10000);
+      var price = currency.toUpperCase() + '->' + pair.replace('_' + currency, '').toUpperCase() + ': ' + (Math.round(tickers[pair].last * 10000) / 10000);
       if (response == undefined) {
         if (withTimestamp == true) {
           response = tickers[pair].updatetime.toISOString() + '\n' + price;

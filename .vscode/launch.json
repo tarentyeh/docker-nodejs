@@ -13,6 +13,7 @@
                 "CHANNEL_ACCESS_TOKEN": "CsR1tRMsaaMgQYEoi1J50Wi7W/EQyNUF8pZpdBlaIJu3PMEGCoiP62NAFcb4++fimhkXfWqAN2EV9mYy77No0JTSvTjS3Umyw8Z+4Bun85HWW8zfQ25YI93LKSHfWee0CE13U0nBh0Vv2sBNVKboDgdB04t89/1O/w1cDnyilFU=",
                 "CHANNEL_SECRET": "58a42475f74073df54edda24cde00f50",
                 "PORT": "8089",
+                "POSTGRES_HOST": "localhost",
             },
         }
     ]
